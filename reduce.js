@@ -8,7 +8,7 @@ Examples:
 
 function extractValue(arr, key) {
    return arr.reduce(function(acc, nextValue){
-        acc.push(next[key]);
+        acc.push(nextValue[key]);
         return acc; 
     },[]);
 }

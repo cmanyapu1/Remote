@@ -20,7 +20,7 @@
 
 let categories = [];
 const width = 6
-const height = 5
+const height = 6
 const htmlBoard = document.getElementById('jeopardy');
 
 
@@ -29,20 +29,24 @@ const htmlBoard = document.getElementById('jeopardy');
  * Returns array of category ids
  */
 
-function getCategoryIds() {
+async function getCategoryIds() {
+    console.log('here we are')
 
-    const response = axios.get(`http://jservice.io/api/categories`,{params: {count: 6}});
+    const response = await axios.get(`http://jservice.io/api/categories`,{params: {count: 100}});
+
+    let questions = response.data.filter(x=>x.clues_count>height)
+
+    questions  = _.sampleSize(questions, height)
     
-    console.log(response);
     
-    const catId = response.data.map(category => {
-        return {
-        id: category.id 
-        }
-    });
+    let catId = []
     
+    for (let category of questions) {
+        catId.push(category.id)
+    }
+
     return catId
-}   
+}       
 
 
 
@@ -58,20 +62,37 @@ function getCategoryIds() {
  *   ]
  */
 
-function getCategory(catId) {
+async function getCategory(catId) {
 
-    const response = axios.get(`http://jservice.io/api/category`,{params: {catId}});
+    const response = await axios.get(`http://jservice.io/api/category?id=${catId}`);
       
-        console.log(response);
       
-        const catdata = response.data.map(questions => {
-          return {
-           title: questions.title,
-           clues: []
-          }
-        });
+        const firstclues = _.sampleSize(response.data.clues, height)
 
-        const firstclues = _.sampleSize(response.data.clues, 5)
+       let catdata = {
+        title: response.data.title,
+        clues: []
+       }
+       console.log("\n\n\n\n")
+
+       console.log(response)
+        console.log("\n\n\n\n")
+
+       console.log(catdata);
+
+         //for (let questions of response.data) {
+           // catdata.push(questions.title)
+            //console.log(questions)
+
+         //}
+
+      //  const catdata = response.data.map(questions => {
+        //  return {
+          // title: questions.title,
+           //clues: []
+         // }
+        //});
+
 
         firstclues.map(data => {
             catdata.clues.push({Question: data.question, Answer: data.answer, Showing: null})
@@ -79,8 +100,9 @@ function getCategory(catId) {
         )
 
         categories.push(catdata)
+        console.log(categories);
 
-        return catdata
+        return categories;
 
 }
 
@@ -93,7 +115,8 @@ function getCategory(catId) {
  */
 
 async function fillTable() {
-
+    $('thead').empty();
+    $('tbody').empty();
     $("thead").add("tr")
 
     const categoryrow = categories.map(data => {
@@ -111,12 +134,13 @@ async function fillTable() {
 
 
         // make main part of the board
-        for (let y = 0; y < HEIGHT; y++) {
+        for (let y = 0; y < height; y++) {
             const row = document.createElement("tr");
             for (let x = 0; x < height; x++) {
                 const cell = document.createElement("td");
                 cell.setAttribute("id", `${y}-${x}`);
                 row.append(cell);
+
             }
             $("tbody").append(row);
         }
@@ -132,23 +156,26 @@ async function fillTable() {
  * */
 
 function handleClick(evt) {
-    let x = 0
+    let x = 0 //why do these variables need to be defined
     let y = 0
 
     y = evt.target.id.charAt(0)
     x = evt.target.id.charAt(2) 
 
-    if (categories[x].clues[y].Showing = null) {
+    if (categories[x].clues[y].Showing === null) {
         categories[x].clues[y].Showing = "question";
-        let targetcell = getElementById(`${y}-${x}`);
-        targetcell.append(categories[x].clues[y].question)
+        let targetcell = document.getElementById(`${y}-${x}`);
+        targetcell.append(categories[x].clues[y].Question)
+        return
     }
-    else if (categories[x].clues[y].Showing = "question") {
+    else if (categories[x].clues[y].Showing === "question") {
         categories[x].clues[y].Showing = "answer"
-        let targetcell2 = getElementById(`${y}-${x}`);
-        targetcell2.append(categories[x].clues[y].question)
+        let targetcell2 = document.getElementById(`${y}-${x}`);
+        targetcell2.replaceChildren();
+        targetcell2.append(categories[x].clues[y].Answer)
+        return
     }
-    else (categories[x].clues[y].Showing = "answer") 
+    else (categories[x].clues[y].Showing === "answer") 
         return
     
 
@@ -175,10 +202,14 @@ function hideLoadingView() {
  * */
 
 async function setupAndStart() {
-   const randomcatids = getCategoryIds()
-    
+    categories = [];
+   let randomcatids = await getCategoryIds() //why do you have to make this a variable and not fillTable
+   
+   console.log("Chirag")
+   console.log(randomcatids)
+
     for (let x = 0; x < width; x++) {
-        getCategory(randomcatids[x]);
+        await getCategory(randomcatids[x]);
     }
     fillTable()
 }
@@ -188,7 +219,7 @@ $("#start").on("click", async function() {
     setupAndStart()
 })
 
-$("#jeopardy").on("click", handleClick())
+$("#jeopardy").on("click", handleClick)
 
 /** On click of start / restart button, set up game. */
 
